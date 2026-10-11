@@ -4,8 +4,7 @@
   <br>
 
   <a href="https://github.com/figranium/figranium/blob/main/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/figranium/figranium?style=for-the-badge&label=License&color=3DA639&logo=opensourceinitiative&logoColor=white" alt="License"></a>
-  <a href="https://github.com/figranium/figranium/pkgs/container/figranium" target="_blank"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffigranium%2Ffigranium%2Fmain%2Fghcr-stats.json&query=downloads_compact&label=Pulls&color=2496ED&style=for-the-badge&logo=docker&logoColor=white" alt="Docker Pulls"></a>
-
+  <a href="https://github.com/figranium/figranium/pkgs/container/figranium" target="_blank"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffigranium%2Ffigranium%2Fmain%2Fghcr-stats.json&amp;query=%24.downloads_compact&amp;label=Pulls&amp;color=2496ED&amp;style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker Pulls"></a>
   <a href="https://discord.gg/kPmfbgu9Xn" target="_blank"><img src="https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
 
   <p><strong>Stack blocks visually to build complex browser workflows and execute them via API.</strong></p>
