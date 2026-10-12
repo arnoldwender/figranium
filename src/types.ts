@@ -214,6 +214,13 @@ export interface Results {
     logs: string[];
     timestamp: string;
     outcome?: TaskOutcome;
+    error?: {
+        message: string;
+        endpoint?: string;
+        status?: number;
+        code?: string;
+        runId?: string;
+    };
 }
 
 export interface Execution {

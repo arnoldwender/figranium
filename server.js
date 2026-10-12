@@ -303,7 +303,11 @@ const prepareExecution = (baseMeta = {}) => async (req, res, next) => {
             if (timeout) clearTimeout(timeout);
             const body = req.body || {};
             const finishedAt = Date.now();
-            const result = res.locals.executionResult || (closedEarly ? { outcome: 'stopped', logs: ['Execution connection closed.'] } : null);
+            // A client connection closing is not an operator cancellation. This
+            // commonly occurs when the browser loses connectivity mid-request;
+            // record it as a crash so the execution history reflects the run
+            // that actually failed instead of showing a misleading cancellation.
+            const result = res.locals.executionResult || (closedEarly ? { outcome: 'crashed', logs: ['Execution connection closed before a result was returned.'] } : null);
             Object.assign(entry, {
                 phase: 'finished',
                 finishedAt,

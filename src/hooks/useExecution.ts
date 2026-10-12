@@ -17,6 +17,30 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
     const stopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const headfulBusyRef = useRef(false);
 
+    const reportExecutionFailure = (task: Task, runId: string, endpoint: string, error: any) => {
+        const rawMessage = error?.message || String(error);
+        const message = formatExecutionError(rawMessage, task.mode);
+        const isNetworkFailure = error instanceof TypeError && /failed to fetch|networkerror/i.test(rawMessage);
+        const displayMessage = isNetworkFailure
+            ? 'The browser could not reach the execution service. No HTTP response was received.'
+            : message;
+
+        setResults({
+            url: task.url,
+            logs: [],
+            timestamp: new Date().toLocaleTimeString(),
+            outcome: 'error',
+            error: {
+                message: displayMessage,
+                endpoint,
+                status: Number.isInteger(error?.status) ? error.status : undefined,
+                code: typeof error?.code === 'string' ? error.code : undefined,
+                runId,
+            },
+        });
+        showAlert(`Execution failed: ${displayMessage}`, 'error');
+    };
+
     const stopHeadful = async () => {
         if (headfulBusyRef.current) return;
         headfulBusyRef.current = true;
@@ -154,9 +178,10 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
             };
 
             const executeTask = async (mode: 'scrape' | 'agent') => {
+                const endpoint = `/${mode}`;
                 const controller = new AbortController();
                 executeAbortRef.current = controller;
-                const res = await fetch(`/${mode}`, {
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
@@ -172,6 +197,8 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                     }
                     const error = new Error(errorData?.details || errorData?.error || "Request failed");
                     (error as any).code = errorData?.error;
+                    (error as any).status = res.status;
+                    (error as any).endpoint = endpoint;
                     throw error;
                 }
 
@@ -220,8 +247,11 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                             signal: controller.signal
                         });
                         if (!res.ok) {
-                            const errorData = await res.json();
-                            throw new Error(errorData.details || errorData.error || "Request failed");
+                            const errorData = await res.json().catch(() => ({}));
+                            const error = new Error(errorData.details || errorData.error || "Request failed");
+                            (error as any).code = errorData?.error;
+                            (error as any).status = res.status;
+                            throw error;
                         }
                         return res.json();
                     })();
@@ -240,14 +270,13 @@ export function useExecution(showAlert: (msg: string, tone?: 'success' | 'error'
                     setIsExecuting(false);
                     return;
                 } catch (fallbackError: any) {
-                    const errorMessage = formatExecutionError(fallbackError?.message || String(fallbackError), taskToRun?.mode);
-                    showAlert(`Execution crash: ${errorMessage}`, 'error');
+                    reportExecutionFailure(taskToRun, runId, '/scrape', fallbackError);
                     setIsExecuting(false);
                     return;
                 }
             }
-            const errorMessage = formatExecutionError(e?.message || String(e), taskToRun?.mode);
-            showAlert(`Execution crash: ${errorMessage}`, 'error');
+            const effectiveMode = taskToRun.mode === 'headful' ? 'scrape' : taskToRun.mode;
+            reportExecutionFailure(taskToRun, runId, e?.endpoint || `/${effectiveMode}`, e);
             if (taskToRun?.mode === 'headful') {
                 setIsExecuting(false);
             }

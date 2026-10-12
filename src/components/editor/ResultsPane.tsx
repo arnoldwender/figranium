@@ -215,6 +215,29 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
         );
     }
 
+    if (activeResults?.error) {
+        const { message, status, code, runId: failedRunId } = activeResults.error;
+        return (
+            <section role="alert" className="glass-card min-h-64 rounded-[32px] border border-red-500/20 bg-red-500/[0.04] p-7 text-left">
+                <div className="flex items-start gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-400/20 bg-red-500/10">
+                        <TablerIcon name="error" className="text-xl text-red-300" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-xs font-bold tracking-[0.2em] text-red-300">EXECUTION FAILED</p>
+                        <h2 className="mt-2 text-sm font-semibold text-white">The task did not return results.</h2>
+                        <p className="mt-2 text-sm leading-6 text-white/65">{message}</p>
+                    </div>
+                </div>
+                <dl className="mt-7 space-y-3 border-t border-white/10 pt-5 text-xs">
+                    <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-white/40">Response</dt><dd className="text-right font-mono text-white/75">{status ? `HTTP ${status}` : 'No HTTP response received'}</dd></div>
+                    {code && <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-white/40">Error code</dt><dd className="break-all text-right font-mono text-white/75">{code}</dd></div>}
+                    {failedRunId && <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-white/40">Run ID</dt><dd className="break-all text-right font-mono text-white/75">{failedRunId}</dd></div>}
+                </dl>
+            </section>
+        );
+    }
+
     if (!hasUsableResults) {
         return <ResultsSkeleton animated={isExecuting && resultView === 'latest'} />;
     }
