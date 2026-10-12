@@ -104,7 +104,7 @@ function createSafeProxy(target) {
     return proxy;
 }
 
-const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
+const runExtractionScript = async (script, html, pageUrl, includeShadowDom, runtimeVariables = {}) => {
     if (!script || typeof script !== 'string') return { result: undefined, logs: [] };
     try {
         const dom = new JSDOM(html || '');
@@ -170,6 +170,9 @@ const runExtractionScript = async (script, html, pageUrl, includeShadowDom) => {
         const data = {
             html: () => html || '',
             url: () => pageUrl || '',
+            // Values are exposed as data, never interpolated into user script
+            // source. This lets API-key runs parameterize saved extractors safely.
+            variables: runtimeVariables && typeof runtimeVariables === 'object' ? { ...runtimeVariables } : {},
             window,
             document: window.document,
             shadowQueryAll: includeShadowDom ? shadowHelpers.shadowQueryAll : undefined,

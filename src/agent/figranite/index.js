@@ -21,6 +21,58 @@ const { setStopChecker, setStopCleaner, consumeStopRequest, clearStopRequest, re
 const { maybeAutoSolveCaptcha, setProgressReporter, reportProgress, buildResolvedActionInputs, snapshotTestVariables, TaskInputError } = require('./run-utils');
 const { createRuntimeContext, normalizeActions } = require('./run-context');
 
+const stringifyScriptValue = (value) => {
+    try {
+        const encoded = JSON.stringify(value ?? '');
+        return encoded === undefined ? '""' : encoded;
+    } catch {
+        return JSON.stringify(String(value ?? ''));
+    }
+};
+
+const stringifyStringContent = (value, quote) => {
+    let encoded = JSON.stringify(String(value ?? '')).slice(1, -1);
+    if (quote === "'") encoded = encoded.replace(/'/g, "\\\\'");
+    if (quote === '`') encoded = encoded.replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+    return encoded;
+};
+
+// Legacy placeholders are still supported for API-key runs, but values become
+// JSON literals or escaped string content rather than executable source text.
+function resolveExtractionScriptTemplate(script, getValue) {
+    if (typeof script !== 'string' || !script.includes('{$')) return script;
+    let quote = null;
+    let escaped = false;
+    let result = '';
+
+    for (let index = 0; index < script.length; index++) {
+        const char = script[index];
+        if (quote) {
+            if (char === '\\' && !escaped) {
+                escaped = true;
+                result += char;
+                continue;
+            }
+            if (char === quote && !escaped) quote = null;
+            escaped = false;
+        } else if (char === "'" || char === '"' || char === '`') {
+            quote = char;
+        }
+
+        if (script.startsWith('{$', index)) {
+            const match = /^\{\$([\w.]+)\}/.exec(script.slice(index));
+            if (match) {
+                const value = getValue(match[1]);
+                result += quote ? stringifyStringContent(value, quote) : stringifyScriptValue(value);
+                index += match[0].length - 1;
+                continue;
+            }
+        }
+        result += char;
+    }
+    return result;
+}
+
 async function runFigranite(data, options = {}) {
     const url = data.url;
     let { actions, wait: globalWait, rotateUserAgents, rotateProxies, humanTyping, stealth = {}, sessionId } = data;
@@ -643,10 +695,17 @@ async function runFigranite(data, options = {}) {
             }
         }
 
-        const extractionScript = extractionScriptRaw ? resolveTemplate(extractionScriptRaw) : undefined;
+        const extractionScript = extractionScriptRaw
+            ? (data.disableExtractionScriptTemplating
+                ? resolveExtractionScriptTemplate(extractionScriptRaw, (name) => {
+                    if (Object.prototype.hasOwnProperty.call(runtimeVars, name)) return runtimeVars[name];
+                    return resolveTemplate(`{$${name}}`);
+                })
+                : resolveTemplate(extractionScriptRaw))
+            : undefined;
         const extraction = isTestMode
             ? { result: undefined, logs: [] }
-            : await runExtractionScript(extractionScript, cleanedHtml, page.url(), includeShadowDom);
+            : await runExtractionScript(extractionScript, cleanedHtml, page.url(), includeShadowDom, runtimeVars);
 
         const capturesDir = path.join(__dirname, '../../public', 'captures');
         // ⚡ Bolt: Use non-blocking directory creation
@@ -805,5 +864,6 @@ module.exports = {
     maybeAutoSolveCaptcha,
     buildResolvedActionInputs,
     snapshotTestVariables,
+    resolveExtractionScriptTemplate,
     TaskInputError,
 };

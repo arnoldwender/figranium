@@ -12,6 +12,7 @@
  */
 
 const http = require('http');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -20,8 +21,10 @@ const TEST_PORT = 11399;
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
 const API_KEY_FILE = path.join(DATA_DIR, 'api_key.json');
+const API_KEYS_FILE = path.join(DATA_DIR, 'api_keys.json');
 
 let originalApiKey;
+let originalApiKeys;
 let originalTasks;
 
 function httpRequest(method, urlPath, body, headers = {}) {
@@ -86,6 +89,19 @@ async function setup() {
         originalApiKey = fs.readFileSync(API_KEY_FILE, 'utf8');
     }
     fs.writeFileSync(API_KEY_FILE, JSON.stringify({ apiKey: TEST_API_KEY }, null, 2));
+    if (fs.existsSync(API_KEYS_FILE)) {
+        originalApiKeys = fs.readFileSync(API_KEYS_FILE, 'utf8');
+    }
+    const salt = 'api-endpoints-test-salt';
+    fs.writeFileSync(API_KEYS_FILE, JSON.stringify([{
+        id: 'key_api_endpoints_test',
+        name: 'API endpoints test key',
+        salt,
+        hash: crypto.scryptSync(TEST_API_KEY, salt, 64).toString('hex'),
+        permissions: ['tasks:read', 'tasks:run', 'tasks:manage'],
+        taskIds: [],
+        createdAt: new Date().toISOString()
+    }], null, 2));
 
     // Backup tasks
     if (fs.existsSync(TASKS_FILE)) {
@@ -110,6 +126,11 @@ async function teardown() {
         fs.writeFileSync(API_KEY_FILE, originalApiKey);
     } else if (fs.existsSync(API_KEY_FILE)) {
         fs.unlinkSync(API_KEY_FILE);
+    }
+    if (originalApiKeys) {
+        fs.writeFileSync(API_KEYS_FILE, originalApiKeys);
+    } else if (fs.existsSync(API_KEYS_FILE)) {
+        fs.unlinkSync(API_KEYS_FILE);
     }
     if (originalTasks) {
         fs.writeFileSync(TASKS_FILE, originalTasks);

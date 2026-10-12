@@ -19,7 +19,7 @@ fs.promises.readFile = async (file, ...args) => {
     return readFile.call(fs.promises, file, ...args);
 };
 
-const { requireApiKey, requireApiPermission } = require('../src/server/middleware');
+const { requireApiKey, requireApiPermission, requireScopedPermission } = require('../src/server/middleware');
 
 async function check(value, expectedStatus) {
     const req = {
@@ -48,10 +48,26 @@ async function check(value, expectedStatus) {
     }
 }
 
+function checkManageOnlyRoute(permissions, expectedStatus) {
+    const req = { apiKey: { permissions, taskIds: [] }, params: {} };
+    const res = {
+        status(code) { this.statusCode = code; return this; },
+        json(body) { this.body = body; return this; }
+    };
+    let continued = false;
+    requireScopedPermission('tasks:manage')(req, res, () => { continued = true; });
+    assert.equal(res.statusCode || 200, expectedStatus);
+    assert.equal(continued, expectedStatus === 200);
+    if (expectedStatus === 403) assert.equal(res.body?.error, 'API_KEY_FORBIDDEN');
+}
+
 (async () => {
     try {
         await check(secret, 200);
         await check('wrong-key', 401);
+        checkManageOnlyRoute(['tasks:read'], 403);
+        checkManageOnlyRoute(['tasks:run'], 403);
+        checkManageOnlyRoute(['tasks:manage'], 200);
         console.log('API key middleware accepts valid keys and rejects invalid keys');
     } finally {
         fs.promises.readFile = readFile;

@@ -4,7 +4,6 @@ import { Execution, Results, ConfirmRequest } from '../types';
 import TablerIcon from './TablerIcon';
 import OutcomeIcon from './OutcomeIcon';
 import ResultsPane from './editor/ResultsPane';
-import { useHeadfulStatus } from '../hooks/useHeadfulStatus';
 import { normalizeTaskOutcome } from '../utils/taskOutcome';
 import { ExecutionDetailSkeleton } from './common/Skeleton';
 
@@ -37,7 +36,6 @@ const ExecutionDetailScreen: React.FC<ExecutionDetailScreenProps> = ({ onConfirm
     const [loading, setLoading] = useState(false);
     const [fullResultLoading, setFullResultLoading] = useState(false);
     const [fullResultLoaded, setFullResultLoaded] = useState(false);
-    const useNovnc = useHeadfulStatus();
 
     useEffect(() => {
         const loadExecution = async () => {
@@ -201,7 +199,6 @@ const ExecutionDetailScreen: React.FC<ExecutionDetailScreenProps> = ({ onConfirm
                             onConfirm={onConfirm}
                             onNotify={onNotify}
                             fullWidth
-                            useNovnc={useNovnc}
                         />
                 </section>
             </div>

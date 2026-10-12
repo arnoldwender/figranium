@@ -650,7 +650,6 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 onNotify={onNotify}
                 onPinResults={onPinResults}
                 onUnpinResults={onUnpinResults}
-                useNovnc={useNovnc}
             />
 
             <VersionPreviewModal

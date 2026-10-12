@@ -16,7 +16,6 @@ interface ResultsDrawerProps {
     onNotify: (message: string, tone?: 'success' | 'error') => void;
     onPinResults?: (results: Results) => void;
     onUnpinResults?: () => void;
-    useNovnc?: boolean | null;
 }
 
 const ResultsDrawer: React.FC<ResultsDrawerProps> = ({
@@ -32,7 +31,6 @@ const ResultsDrawer: React.FC<ResultsDrawerProps> = ({
     onNotify,
     onPinResults,
     onUnpinResults,
-    useNovnc,
 }) => {
     return (
         <div
@@ -59,7 +57,6 @@ const ResultsDrawer: React.FC<ResultsDrawerProps> = ({
                     onPin={onPinResults}
                     onUnpin={onUnpinResults}
                     fullWidth={true}
-                    useNovnc={useNovnc}
                 />
             </div>
         </div>

@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { requireAuthOrApiKey } = require('../middleware');
+const { requireAuth } = require('../middleware');
 const { loadCredentials, saveCredentials } = require('../storage');
 const { validateUrl, fetchWithRedirectValidation } = require('../../../url-utils');
 const { normalizeBaserowTables } = require('../baserow-table-list');
@@ -8,7 +8,7 @@ const { normalizeBaserowTables } = require('../baserow-table-list');
 const router = express.Router();
 
 // GET /api/credentials
-router.get('/', requireAuthOrApiKey, async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     try {
         const credentials = await loadCredentials();
         // Redact tokens before sending to client
@@ -23,7 +23,7 @@ router.get('/', requireAuthOrApiKey, async (req, res) => {
 });
 
 // POST /api/credentials
-router.post('/', requireAuthOrApiKey, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     const { name, provider, config } = req.body;
     if (!name || !provider || !config) {
         return res.status(400).json({ error: 'MISSING_FIELDS' });
@@ -60,7 +60,7 @@ router.post('/', requireAuthOrApiKey, async (req, res) => {
 });
 
 // PUT /api/credentials/:id
-router.put('/:id', requireAuthOrApiKey, async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
     const { name, config } = req.body;
     if (config && config.baseUrl) {
         try {
@@ -91,7 +91,7 @@ router.put('/:id', requireAuthOrApiKey, async (req, res) => {
 });
 
 // Database tokens can enumerate their permitted tables through the Database API.
-router.get('/:id/proxy/baserow/tables', requireAuthOrApiKey, async (req, res) => {
+router.get('/:id/proxy/baserow/tables', requireAuth, async (req, res) => {
     try {
         const credential = (await loadCredentials()).find(c => c.id === req.params.id && c.provider === 'baserow');
         if (!credential) return res.status(404).json({ error: 'CREDENTIAL_NOT_FOUND' });
@@ -110,7 +110,7 @@ router.get('/:id/proxy/baserow/tables', requireAuthOrApiKey, async (req, res) =>
     }
 });
 
-router.get('/:id/proxy/baserow/tables/:tableId/fields', requireAuthOrApiKey, async (req, res) => {
+router.get('/:id/proxy/baserow/tables/:tableId/fields', requireAuth, async (req, res) => {
     if (!/^\d+$/.test(req.params.tableId)) return res.status(400).json({ error: 'INVALID_TABLE_ID' });
     try {
         const credential = (await loadCredentials()).find(c => c.id === req.params.id && c.provider === 'baserow');
@@ -129,7 +129,7 @@ router.get('/:id/proxy/baserow/tables/:tableId/fields', requireAuthOrApiKey, asy
 });
 
 // DELETE /api/credentials/:id
-router.delete('/:id', requireAuthOrApiKey, async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
     try {
         const credentials = await loadCredentials();
         const filtered = credentials.filter(c => c.id !== req.params.id);

@@ -53,7 +53,8 @@ const {
     isIpAllowed,
     requireApiKey,
     requireApiPermission,
-    requireAuthOrApiKey
+    requireAuthOrApiKey,
+    requireScopedPermission
 } = require('./src/server/middleware');
 
 // Feature Modules (Legacy/Existing)
@@ -403,6 +404,12 @@ const executeTaskById = async (req, res) => {
         req.body = {};
     }
 
+    // API keys are scoped to running a saved task. A replacement extraction
+    // program would turn that narrow capability into server-side script control.
+    if (req.apiKey && Object.prototype.hasOwnProperty.call(req.body, 'extractionScript')) {
+        return res.status(400).json({ error: 'EXTRACTION_SCRIPT_OVERRIDE_FORBIDDEN' });
+    }
+
     // Webhook: validate and stash for post-execution delivery
     const webhookUrl = req.body.webhookUrl;
     if (webhookUrl) {
@@ -434,7 +441,9 @@ const executeTaskById = async (req, res) => {
         taskVariables: runtimeVars,
         actions: task.actions || [],
         mode: task.mode || 'agent',
-        extractionScript: req.body.extractionScript || task.extractionScript
+        extractionScript: task.extractionScript,
+        // Runtime values supplied by an API key must not become program source.
+        disableExtractionScriptTemplating: Boolean(req.apiKey)
     };
 
     if (task.mode === 'scrape') {
@@ -529,15 +538,15 @@ app.use('/file-icons', express.static(path.join(__dirname, 'public', 'file-icons
     immutable: true,
     etag: true
 }));
-app.get('/captures/:legacyName', requireAuthOrApiKey, dataRateLimiter, async (req, res, next) => {
+app.get('/captures/:legacyName', requireAuthOrApiKey, requireScopedPermission('tasks:manage'), dataRateLimiter, async (req, res, next) => {
     try {
         const entry = await require('./src/server/cabinets').resolveLegacyPath(req.params.legacyName);
         if (!entry) return next();
         return res.download(entry.path, entry.item.name);
     } catch { return next(); }
 });
-app.use('/captures', requireAuthOrApiKey, express.static(capturesDir), express.static(srcCapturesDir));
-app.use('/screenshots', requireAuthOrApiKey, express.static(capturesDir), express.static(srcCapturesDir));
+app.use('/captures', requireAuthOrApiKey, requireScopedPermission('tasks:manage'), express.static(capturesDir), express.static(srcCapturesDir));
+app.use('/screenshots', requireAuthOrApiKey, requireScopedPermission('tasks:manage'), express.static(capturesDir), express.static(srcCapturesDir));
 // The SPA shell and unhashed bootstrap files must always be revalidated. Safari can
 // otherwise restore a stale app shell after the browser is closed and reopened,
 // leaving it pointing at assets from a different build. Hashed Vite assets are

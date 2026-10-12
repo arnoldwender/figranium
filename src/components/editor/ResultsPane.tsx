@@ -22,21 +22,15 @@ interface ResultsPaneProps {
     onPin?: (results: Results) => void;
     onUnpin?: () => void;
     fullWidth?: boolean;
-    useNovnc?: boolean | null;
 }
 
 import { MAX_COPY_CHARS, ResultsSkeleton, formatSize, normalizeBoolean, getResultsCopyPayload, getTruncatedCopyText, getFullCopyText, getResultsPreview, getTableData, getExportPayload, downloadText } from './resultsUtils';
 
-const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExecuting, isHeadful, runId, onConfirm, onNotify, onPin, onUnpin, fullWidth, useNovnc }) => {
+const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExecuting, isHeadful, runId, onConfirm, onNotify, onPin, onUnpin, fullWidth }) => {
     const [copied, setCopied] = useState<string | null>(null);
     const [dataView, setDataView] = useState<'raw' | 'table'>('raw');
     const [mainView, setMainView] = useState<'data' | 'downloads'>('data');
     const [resultView, setResultView] = useState<'latest' | 'pinned'>(() => (pinnedResults && !results ? 'pinned' : 'latest'));
-
-    const headfulViewer = useMemo(() => {
-        if (useNovnc === null) return 'checking';
-        return useNovnc ? 'novnc' : 'native';
-    }, [useNovnc]);
 
     const [capturesOpen, setCapturesOpen] = useState(false);
     const [capturesLoading, setCapturesLoading] = useState(false);
@@ -45,7 +39,6 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     const [fallbackScreenshotUrl, setFallbackScreenshotUrl] = useState<string | null>(null);
     const [failedPrimaryScreenshotUrl, setFailedPrimaryScreenshotUrl] = useState<string | null>(null);
     const wasExecutingRef = useRef(isExecuting);
-    const headfulFrameRef = useRef<HTMLDivElement | null>(null);
     const activeResults = resultView === 'pinned' && pinnedResults ? pinnedResults : results;
     const tableData = useMemo(() => getTableData(activeResults?.data), [activeResults?.data]);
     const preview = useMemo(() => activeResults && activeResults.data !== undefined && activeResults.data !== null && activeResults.data !== ''
@@ -207,58 +200,17 @@ const ResultsPane: React.FC<ResultsPaneProps> = ({ results, pinnedResults, isExe
     };
 
     if (isHeadful && resultView === 'latest') {
-        const { origin, hostname } = window.location;
-        const theme = document.documentElement.dataset.theme || 'dark';
-        const headfulUrl = `${origin}/novnc.html?host=${hostname}&path=websockify&theme=${encodeURIComponent(theme)}`;
-        const requestFullscreen = () => {
-            const target = headfulFrameRef.current;
-            if (!target) return;
-            if (document.fullscreenElement) {
-                document.exitFullscreen().catch(() => {
-                    // ignore
-                });
-                return;
-            }
-            target.requestFullscreen?.().catch(() => {
-                // ignore
-            });
-        };
-        if (headfulViewer === 'native') {
-            return (
-                <div className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative flex flex-col items-center justify-center p-8 text-center gap-4">
-                    <div className="text-[12px] font-bold tracking-widest text-white">
-                        Headful Session Active
-                    </div>
-                    <div className="text-xs font-bold tracking-widest text-amber-500/80 max-w-lg leading-relaxed">
-                        Figranium is not optimized for native browser windows. Please install the proper tools for stability (Xvfb, x11vnc, websockify) or simply use the Docker version.
-                    </div>
-                </div>
-            );
-        }
-        if (headfulViewer === 'checking') {
-            return (
-                <div className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative flex items-center justify-center">
-                    <div className="text-xs font-bold tracking-widest text-gray-500">
-                        Checking headful viewer...
-                    </div>
-                </div>
-            );
-        }
         return (
-            <div ref={headfulFrameRef} className="glass-card rounded-[32px] overflow-hidden h-[80vh] w-full relative">
-                <button
-                    type="button"
-                    onClick={requestFullscreen}
-                    className="absolute top-4 right-4 z-10 px-3 py-2 rounded-xl border border-white/20 bg-black/40 text-xs font-bold tracking-widest text-white/80 hover:bg-black/60 transition-all"
-                    title="Toggle fullscreen"
-                >
-                    Fullscreen
-                </button>
-                <iframe
-                    src={headfulUrl}
-                    className="absolute inset-0 w-full h-full"
-                    title="Headful Browser"
-                />
+            <div className="glass-card rounded-[32px] w-full min-h-64 flex flex-col items-center justify-center p-8 text-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-400/20 flex items-center justify-center">
+                    <TablerIcon name="open_in_browser" className="text-blue-300 text-2xl" />
+                </div>
+                <div>
+                    <h2 className="text-sm font-bold tracking-widest text-white">Browser session active</h2>
+                    <p className="mt-2 text-xs leading-5 text-white/50 max-w-xs">
+                        The live browser is shown in the browser window. Results will appear here when the session finishes.
+                    </p>
+                </div>
             </div>
         );
     }
